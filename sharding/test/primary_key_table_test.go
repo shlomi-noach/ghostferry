@@ -43,6 +43,16 @@ func (t *PrimaryKeyTableTestSuite) TestPrimaryKeyTableWithDataWriter() {
 
 		dataWriter.Wait()
 		time.Sleep(1 * time.Second)
+
+		rows, err := t.Ferry.Ferry.TargetDB.Query("SELECT * FROM gftest2.tenants_table")
+		t.Require().Nil(err)
+		if rows.Next() {
+			t.Require().Fail("did not expect primary key table rows to be copied")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 	})
 
 	go dataWriter.Run()
@@ -62,6 +72,7 @@ func (t *PrimaryKeyTableTestSuite) TestPrimaryKeyTableWithDataWriter() {
 	var expected, actual string
 	row = t.Ferry.Ferry.SourceDB.QueryRow("SELECT data FROM gftest1.tenants_table WHERE id = 2")
 	testhelpers.PanicIfError(row.Scan(&expected))
+	// there should only be one tenant in the target and its data should match the source
 	row = t.Ferry.Ferry.TargetDB.QueryRow("SELECT data FROM gftest2.tenants_table")
 	testhelpers.PanicIfError(row.Scan(&actual))
 	t.Require().Equal(expected, actual)
